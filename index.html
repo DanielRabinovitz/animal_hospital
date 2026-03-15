@@ -45,8 +45,8 @@
                     <span id="coins" class="value">0</span> 🪙
                 </div>
                 <div class="hud-item">
-                    <span class="label">Level:</span>
-                    <span id="current-floor" class="value">1</span>
+                    <span class="label">Floor:</span>
+                    <span id="current-floor" class="value">1 - Reception</span>
                 </div>
                 <div class="hud-item">
                     <span id="player-character">🐱</span>
@@ -54,19 +54,24 @@
                 </div>
             </div>
 
-            <!-- Hospital Building -->
-            <div id="hospital">
-                <div id="floors-container"></div>
-            </div>
+            <div id="game-container-inner">
+                <!-- Game Canvas -->
+                <div id="game-canvas-container">
+                    <canvas id="game-canvas" width="600" height="400"></canvas>
+                    <div id="controls-hint">Use Arrow Keys or WASD to move • E to pick up items • Space at elevator</div>
+                </div>
 
-            <!-- Patient Request Panel -->
-            <div id="patient-panel">
-                <h3>Waiting Patients</h3>
-                <div id="patients-container"></div>
+                <!-- Clipboard UI -->
+                <div id="clipboard">
+                    <h3>📋 Patient List</h3>
+                    <div id="clipboard-patients"></div>
+                    <div id="inventory-section">
+                        <h4>Your Inventory:</h4>
+                        <div id="inventory-display"></div>
+                    </div>
+                    <button id="shop-button" class="fancy-button">🏪 Upgrade Shop</button>
+                </div>
             </div>
-
-            <!-- Upgrade Shop -->
-            <button id="shop-button" class="fancy-button">🏪 Upgrade Shop</button>
         </div>
 
         <!-- Shop Modal -->

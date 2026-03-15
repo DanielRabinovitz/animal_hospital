@@ -3,13 +3,26 @@ const gameState = {
     player: {
         character: null,
         name: '',
-        coins: 0
+        coins: 0,
+        x: 100,
+        y: 200,
+        inventory: [],
+        currentFloor: 1,
+        speed: 3
     },
     floors: [
-        { id: 1, name: 'Reception', level: 1, items: ['📋', '🔔', '📞'], unlocked: true }
+        {
+            id: 1,
+            name: 'Reception',
+            level: 1,
+            items: [
+                { emoji: '📋', name: 'Clipboard', x: 200, y: 150, collected: false },
+                { emoji: '🔔', name: 'Bell', x: 400, y: 150, collected: false }
+            ],
+            unlocked: true
+        }
     ],
     waitingPatients: [],
-    currentPatientId: null,
     patientTypes: [
         { emoji: '🐭', name: 'Mouse' },
         { emoji: '🐰', name: 'Bunny' },
@@ -21,13 +34,50 @@ const gameState = {
         { emoji: '🐹', name: 'Hamster' }
     ],
     availableFloors: [
-        { id: 2, name: 'Examination Room', items: ['🌡️', '🩺', '💉'], cost: 50, unlocked: false },
-        { id: 3, name: 'Treatment Room', items: ['💊', '🩹', '💉'], cost: 100, unlocked: false },
-        { id: 4, name: 'Food Court', items: ['🧀', '🥕', '🦴', '🐟'], cost: 150, unlocked: false },
-        { id: 5, name: 'Specialty Care', items: ['🍯', '🎋', '🍇', '🌰'], cost: 200, unlocked: false }
+        {
+            id: 2,
+            name: 'Pharmacy',
+            items: [
+                { emoji: '💊', name: 'Medicine', x: 150, y: 150, collected: false },
+                { emoji: '💉', name: 'Syringe', x: 300, y: 150, collected: false },
+                { emoji: '🧪', name: 'Test Tube', x: 450, y: 150, collected: false }
+            ],
+            cost: 50,
+            unlocked: false
+        },
+        {
+            id: 3,
+            name: 'Treatment Room',
+            items: [
+                { emoji: '🩹', name: 'Bandaid', x: 150, y: 150, collected: false },
+                { emoji: '🌡️', name: 'Thermometer', x: 300, y: 150, collected: false },
+                { emoji: '🩺', name: 'Stethoscope', x: 450, y: 150, collected: false }
+            ],
+            cost: 100,
+            unlocked: false
+        },
+        {
+            id: 4,
+            name: 'Food & Treats',
+            items: [
+                { emoji: '🍖', name: 'Food', x: 150, y: 150, collected: false },
+                { emoji: '🥛', name: 'Milk', x: 300, y: 150, collected: false },
+                { emoji: '🍪', name: 'Treats', x: 450, y: 150, collected: false }
+            ],
+            cost: 150,
+            unlocked: false
+        }
     ],
-    nextPatientId: 0
+    nextPatientId: 0,
+    keys: {},
+    elevatorX: 500,
+    elevatorY: 300,
+    receptionDeskX: 300,
+    receptionDeskY: 300
 };
+
+// Canvas setup
+let canvas, ctx;
 
 // Character Selection
 const characterCards = document.querySelectorAll('.character-card');
@@ -62,37 +112,37 @@ characterCards.forEach(card => {
 
 // Initialize Game
 function initGame() {
-    renderFloors();
-    generateNewPatients(4);
+    canvas = document.getElementById('game-canvas');
+    ctx = canvas.getContext('2d');
+
+    generateNewPatients(3);
     updateCoins();
+    updateClipboard();
+    updateInventory();
+
+    setupControls();
+    gameLoop();
 }
 
-// Render Hospital Floors
-function renderFloors() {
-    const floorsContainer = document.getElementById('floors-container');
-    floorsContainer.innerHTML = '';
+// Setup keyboard controls
+function setupControls() {
+    document.addEventListener('keydown', (e) => {
+        gameState.keys[e.key] = true;
 
-    gameState.floors.forEach(floor => {
-        const floorDiv = document.createElement('div');
-        floorDiv.className = 'floor';
-        floorDiv.innerHTML = `
-            <div class="floor-header">
-                <div class="floor-name">${floor.name}</div>
-                <div class="floor-level">Floor ${floor.id}</div>
-            </div>
-            <div class="floor-items">
-                ${floor.items.map(item => `<div class="item" data-item="${item}">${item}</div>`).join('')}
-            </div>
-        `;
-        floorsContainer.appendChild(floorDiv);
+        // Pick up item with E key
+        if (e.key === 'e' || e.key === 'E') {
+            tryPickupItem();
+        }
+
+        // Use elevator with Space
+        if (e.key === ' ') {
+            tryUseElevator();
+            e.preventDefault();
+        }
     });
 
-    // Add click handlers to items
-    document.querySelectorAll('.item').forEach(item => {
-        item.addEventListener('click', () => {
-            const itemEmoji = item.dataset.item;
-            selectItem(itemEmoji, item);
-        });
+    document.addEventListener('keyup', (e) => {
+        gameState.keys[e.key] = false;
     });
 }
 
@@ -100,7 +150,7 @@ function renderFloors() {
 function getAvailableItems() {
     const availableItems = new Set();
     gameState.floors.forEach(floor => {
-        floor.items.forEach(item => availableItems.add(item));
+        floor.items.forEach(item => availableItems.add(item.emoji));
     });
     return Array.from(availableItems);
 }
@@ -109,8 +159,9 @@ function getAvailableItems() {
 function generateNewPatients(count) {
     const availableItems = getAvailableItems();
 
+    if (availableItems.length === 0) return;
+
     for (let i = 0; i < count; i++) {
-        // Generate a random request with 2 unique items from available items only
         const numItems = Math.min(2, availableItems.length);
         const request = [];
         const shuffled = [...availableItems].sort(() => Math.random() - 0.5);
@@ -119,7 +170,6 @@ function generateNewPatients(count) {
             request.push(shuffled[j]);
         }
 
-        // Pick a random patient type
         const patientType = gameState.patientTypes[Math.floor(Math.random() * gameState.patientTypes.length)];
 
         const patient = {
@@ -133,65 +183,157 @@ function generateNewPatients(count) {
         gameState.waitingPatients.push(patient);
     }
 
-    renderPatients();
+    updateClipboard();
 }
 
-// Render all waiting patients
-function renderPatients() {
-    const container = document.getElementById('patients-container');
+// Update clipboard display
+function updateClipboard() {
+    const container = document.getElementById('clipboard-patients');
     container.innerHTML = '';
+
+    if (gameState.waitingPatients.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center;">No patients waiting</p>';
+        return;
+    }
 
     gameState.waitingPatients.forEach(patient => {
         const patientDiv = document.createElement('div');
-        patientDiv.className = 'patient-card';
-        patientDiv.dataset.patientId = patient.id;
+        patientDiv.className = 'clipboard-patient';
 
-        const requestItemsHTML = patient.request.map(item => {
+        const itemsHTML = patient.request.map(item => {
             const collected = patient.collectedItems.includes(item);
-            return `<div class="request-item ${collected ? 'collected' : ''}">${item}</div>`;
+            return `<div class="clipboard-item ${collected ? 'collected' : ''}">${item}</div>`;
         }).join('');
 
         patientDiv.innerHTML = `
-            <div class="patient-avatar">${patient.emoji}</div>
-            <div class="patient-details">
-                <div class="patient-name">${patient.name}</div>
-                <div class="patient-request-section">
-                    <div class="patient-needs">Needs help with:</div>
-                    <div class="request-items-list">${requestItemsHTML}</div>
-                </div>
+            <div class="clipboard-patient-header">
+                <div class="clipboard-patient-avatar">${patient.emoji}</div>
+                <div class="clipboard-patient-name">${patient.name}</div>
             </div>
+            <div class="clipboard-needs">Needs:</div>
+            <div class="clipboard-items">${itemsHTML}</div>
         `;
 
         container.appendChild(patientDiv);
     });
 }
 
-// Select Item
-function selectItem(itemEmoji, element) {
-    if (gameState.waitingPatients.length === 0) return;
+// Update inventory display
+function updateInventory() {
+    const container = document.getElementById('inventory-display');
+    container.innerHTML = '';
 
-    // Find a patient that needs this item and hasn't collected it yet
-    const patient = gameState.waitingPatients.find(p =>
-        p.request.includes(itemEmoji) && !p.collectedItems.includes(itemEmoji)
-    );
+    if (gameState.player.inventory.length === 0) {
+        container.innerHTML = '<p style="color: #999; font-size: 0.9em;">Empty</p>';
+        return;
+    }
 
-    if (patient) {
-        patient.collectedItems.push(itemEmoji);
+    gameState.player.inventory.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'inventory-item';
+        itemDiv.innerHTML = `${item.emoji}`;
+        container.appendChild(itemDiv);
+    });
+}
 
-        // Visual feedback
-        element.classList.add('selected');
-        setTimeout(() => {
-            element.classList.remove('selected');
-        }, 300);
+// Try to pickup nearby item
+function tryPickupItem() {
+    const currentFloor = gameState.floors.find(f => f.id === gameState.player.currentFloor);
+    if (!currentFloor) return;
 
-        // Check if patient request is complete
-        if (patient.collectedItems.length === patient.request.length) {
-            setTimeout(() => {
-                completePatientRequest(patient.id);
-            }, 400);
-        } else {
-            renderPatients();
+    const pickupRadius = 40;
+
+    for (let item of currentFloor.items) {
+        if (item.collected) continue;
+
+        const dx = gameState.player.x - item.x;
+        const dy = gameState.player.y - item.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < pickupRadius) {
+            item.collected = true;
+            gameState.player.inventory.push({ ...item });
+            updateInventory();
+            showMessage(`Picked up ${item.name}!`);
+            return;
         }
+    }
+}
+
+// Try to use elevator
+function tryUseElevator() {
+    const dx = gameState.player.x - gameState.elevatorX;
+    const dy = gameState.player.y - gameState.elevatorY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 50) {
+        showElevatorMenu();
+    }
+}
+
+// Show elevator menu
+function showElevatorMenu() {
+    const floors = gameState.floors;
+    const currentFloor = gameState.player.currentFloor;
+
+    let message = 'Elevator - Choose floor:\n';
+    floors.forEach((floor, index) => {
+        if (floor.id === currentFloor) {
+            message += `[Current] ${floor.id}. ${floor.name}\n`;
+        } else {
+            message += `Press ${index + 1} - ${floor.name}\n`;
+        }
+    });
+
+    showMessage(message);
+
+    const handleFloorSelection = (e) => {
+        const key = parseInt(e.key);
+        if (key >= 1 && key <= floors.length) {
+            gameState.player.currentFloor = floors[key - 1].id;
+            updateFloorDisplay();
+            showMessage(`Going to ${floors[key - 1].name}...`);
+            document.removeEventListener('keydown', handleFloorSelection);
+        }
+    };
+
+    document.addEventListener('keydown', handleFloorSelection);
+}
+
+// Check if player is at reception desk
+function checkReceptionDesk() {
+    if (gameState.player.currentFloor !== 1) return;
+
+    const dx = gameState.player.x - gameState.receptionDeskX;
+    const dy = gameState.player.y - gameState.receptionDeskY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 50 && gameState.player.inventory.length > 0) {
+        deliverItems();
+    }
+}
+
+// Deliver items to patients
+function deliverItems() {
+    let itemsDelivered = false;
+
+    gameState.player.inventory.forEach(invItem => {
+        gameState.waitingPatients.forEach(patient => {
+            if (patient.request.includes(invItem.emoji) && !patient.collectedItems.includes(invItem.emoji)) {
+                patient.collectedItems.push(invItem.emoji);
+                itemsDelivered = true;
+
+                if (patient.collectedItems.length === patient.request.length) {
+                    completePatientRequest(patient.id);
+                }
+            }
+        });
+    });
+
+    if (itemsDelivered) {
+        gameState.player.inventory = [];
+        updateInventory();
+        updateClipboard();
     }
 }
 
@@ -201,21 +343,19 @@ function completePatientRequest(patientId) {
     if (patientIndex === -1) return;
 
     const patient = gameState.waitingPatients[patientIndex];
-    const coinsEarned = 10 + (gameState.floors.length * 5);
+    const coinsEarned = 15 + (gameState.floors.length * 5);
     gameState.player.coins += coinsEarned;
 
-    showSuccessMessage(`${patient.name} helped! +${coinsEarned} 🪙`);
+    showMessage(`${patient.name} helped! +${coinsEarned} 🪙`);
 
-    // Remove the patient
     gameState.waitingPatients.splice(patientIndex, 1);
 
     updateCoins();
-    renderPatients();
+    updateClipboard();
 
-    // Add a new patient after a short delay
     setTimeout(() => {
         generateNewPatients(1);
-    }, 800);
+    }, 1000);
 }
 
 // Update Coins Display
@@ -223,16 +363,105 @@ function updateCoins() {
     document.getElementById('coins').textContent = gameState.player.coins;
 }
 
-// Show Success Message
-function showSuccessMessage(message) {
+// Update floor display
+function updateFloorDisplay() {
+    const floor = gameState.floors.find(f => f.id === gameState.player.currentFloor);
+    document.getElementById('current-floor').textContent = `${floor.id} - ${floor.name}`;
+}
+
+// Show message
+function showMessage(message) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'success-message';
     messageDiv.textContent = message;
+    messageDiv.style.whiteSpace = 'pre-line';
     document.body.appendChild(messageDiv);
 
     setTimeout(() => {
         messageDiv.remove();
-    }, 1500);
+    }, 2000);
+}
+
+// Game Loop
+function gameLoop() {
+    // Update player position
+    if (gameState.keys['ArrowUp'] || gameState.keys['w'] || gameState.keys['W']) {
+        gameState.player.y = Math.max(50, gameState.player.y - gameState.player.speed);
+    }
+    if (gameState.keys['ArrowDown'] || gameState.keys['s'] || gameState.keys['S']) {
+        gameState.player.y = Math.min(350, gameState.player.y + gameState.player.speed);
+    }
+    if (gameState.keys['ArrowLeft'] || gameState.keys['a'] || gameState.keys['A']) {
+        gameState.player.x = Math.max(30, gameState.player.x - gameState.player.speed);
+    }
+    if (gameState.keys['ArrowRight'] || gameState.keys['d'] || gameState.keys['D']) {
+        gameState.player.x = Math.min(570, gameState.player.x + gameState.player.speed);
+    }
+
+    checkReceptionDesk();
+
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// Render game
+function render() {
+    // Clear canvas
+    ctx.fillStyle = '#f0f8ff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const currentFloor = gameState.floors.find(f => f.id === gameState.player.currentFloor);
+
+    // Draw floor
+    ctx.fillStyle = '#e6f2ff';
+    ctx.fillRect(20, 20, 560, 360);
+
+    // Draw floor name
+    ctx.fillStyle = '#667eea';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText(currentFloor.name, 30, 50);
+
+    // Draw elevator
+    ctx.fillStyle = '#888';
+    ctx.fillRect(gameState.elevatorX - 25, gameState.elevatorY - 40, 50, 80);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = '30px Arial';
+    ctx.fillText('🛗', gameState.elevatorX - 15, gameState.elevatorY + 5);
+    ctx.fillStyle = '#333';
+    ctx.font = '12px Arial';
+    ctx.fillText('SPACE', gameState.elevatorX - 20, gameState.elevatorY + 50);
+
+    // Draw reception desk on floor 1
+    if (currentFloor.id === 1) {
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(gameState.receptionDeskX - 40, gameState.receptionDeskY - 20, 80, 40);
+        ctx.fillStyle = '#333';
+        ctx.font = '10px Arial';
+        ctx.fillText('RECEPTION', gameState.receptionDeskX - 30, gameState.receptionDeskY + 35);
+    }
+
+    // Draw items
+    currentFloor.items.forEach(item => {
+        if (!item.collected) {
+            ctx.font = '40px Arial';
+            ctx.fillText(item.emoji, item.x - 20, item.y + 15);
+
+            ctx.fillStyle = '#333';
+            ctx.font = '10px Arial';
+            ctx.fillText(item.name, item.x - 20, item.y + 30);
+            ctx.fillText('Press E', item.x - 18, item.y - 20);
+        }
+    });
+
+    // Draw player
+    ctx.font = '50px Arial';
+    ctx.fillText(gameState.player.character, gameState.player.x - 25, gameState.player.y + 20);
+
+    // Draw player shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.beginPath();
+    ctx.ellipse(gameState.player.x, gameState.player.y + 25, 20, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 // Shop Modal
@@ -260,16 +489,16 @@ function renderShop() {
     const floorUpgradesDiv = document.getElementById('floor-upgrades');
     const existingFloorUpgradesDiv = document.getElementById('existing-floor-upgrades');
 
-    // New Floors
     floorUpgradesDiv.innerHTML = '';
     gameState.availableFloors.forEach(floor => {
         if (!floor.unlocked) {
             const shopItem = document.createElement('div');
             shopItem.className = 'shop-item';
+            const itemsList = floor.items.map(i => i.emoji).join(' ');
             shopItem.innerHTML = `
                 <div class="shop-item-info">
                     <div class="shop-item-name">${floor.name}</div>
-                    <div class="shop-item-desc">Items: ${floor.items.join(' ')}</div>
+                    <div class="shop-item-desc">Items: ${itemsList}</div>
                 </div>
                 <span class="shop-item-price">${floor.cost} 🪙</span>
                 <button onclick="buyFloor(${floor.id})" ${gameState.player.coins < floor.cost ? 'disabled' : ''}>
@@ -284,30 +513,7 @@ function renderShop() {
         floorUpgradesDiv.innerHTML = '<p style="color: #666;">All floors unlocked!</p>';
     }
 
-    // Existing Floor Upgrades
-    existingFloorUpgradesDiv.innerHTML = '';
-    gameState.floors.forEach(floor => {
-        if (floor.level < 3) {
-            const upgradeCost = 30 * floor.level;
-            const shopItem = document.createElement('div');
-            shopItem.className = 'shop-item';
-            shopItem.innerHTML = `
-                <div class="shop-item-info">
-                    <div class="shop-item-name">Upgrade ${floor.name} (Lvl ${floor.level})</div>
-                    <div class="shop-item-desc">Get more items for this floor</div>
-                </div>
-                <span class="shop-item-price">${upgradeCost} 🪙</span>
-                <button onclick="upgradeFloor(${floor.id})" ${gameState.player.coins < upgradeCost ? 'disabled' : ''}>
-                    Upgrade
-                </button>
-            `;
-            existingFloorUpgradesDiv.appendChild(shopItem);
-        }
-    });
-
-    if (existingFloorUpgradesDiv.innerHTML === '') {
-        existingFloorUpgradesDiv.innerHTML = '<p style="color: #666;">All floors at max level!</p>';
-    }
+    existingFloorUpgradesDiv.innerHTML = '<p style="color: #666;">Floor upgrades coming soon!</p>';
 }
 
 // Buy New Floor
@@ -320,34 +526,8 @@ function buyFloor(floorId) {
     gameState.floors.push({ ...floor, level: 1 });
 
     updateCoins();
-    renderFloors();
     renderShop();
-    showSuccessMessage(`${floor.name} unlocked!`);
+    showMessage(`${floor.name} unlocked!`);
 }
 
-// Upgrade Existing Floor
-function upgradeFloor(floorId) {
-    const floor = gameState.floors.find(f => f.id === floorId);
-    if (!floor || floor.level >= 3) return;
-
-    const upgradeCost = 30 * floor.level;
-    if (gameState.player.coins < upgradeCost) return;
-
-    gameState.player.coins -= upgradeCost;
-    floor.level++;
-
-    const bonusItems = ['✨', '⭐', '💝', '🎁', '🌟', '💫'];
-    const newItem = bonusItems[Math.floor(Math.random() * bonusItems.length)];
-    if (!floor.items.includes(newItem)) {
-        floor.items.push(newItem);
-    }
-
-    updateCoins();
-    renderFloors();
-    renderShop();
-    showSuccessMessage(`${floor.name} upgraded to level ${floor.level}!`);
-}
-
-// Make functions globally available
 window.buyFloor = buyFloor;
-window.upgradeFloor = upgradeFloor;
