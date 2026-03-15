@@ -5,10 +5,15 @@ const gameState = {
         name: '',
         coins: 0,
         x: 100,
-        y: 200,
+        y: 280,
+        width: 30,
+        height: 40,
+        velocityY: 0,
+        isJumping: false,
         inventory: [],
         currentFloor: 1,
-        speed: 3
+        speed: 4,
+        color: '#667eea'
     },
     floors: [
         {
@@ -16,31 +21,41 @@ const gameState = {
             name: 'Reception',
             level: 1,
             items: [
-                { emoji: '📋', name: 'Clipboard', x: 200, y: 150, collected: false },
-                { emoji: '🔔', name: 'Bell', x: 400, y: 150, collected: false }
+                { emoji: '📋', name: 'Clipboard', x: 350, y: 290, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 },
+                { emoji: '🔔', name: 'Bell', x: 500, y: 290, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 }
+            ],
+            platforms: [
+                { x: 0, y: 320, width: 600, height: 20 }
             ],
             unlocked: true
         }
     ],
     waitingPatients: [],
+    activePatientsInWorld: [],
     patientTypes: [
-        { emoji: '🐭', name: 'Mouse' },
-        { emoji: '🐰', name: 'Bunny' },
-        { emoji: '🐶', name: 'Puppy' },
-        { emoji: '🐱', name: 'Kitten' },
-        { emoji: '🐻', name: 'Bear Cub' },
-        { emoji: '🐼', name: 'Panda' },
-        { emoji: '🦊', name: 'Fox' },
-        { emoji: '🐹', name: 'Hamster' }
+        { emoji: '🐭', name: 'Mouse', color: '#D3D3D3' },
+        { emoji: '🐰', name: 'Bunny', color: '#FFB6C1' },
+        { emoji: '🐶', name: 'Puppy', color: '#DEB887' },
+        { emoji: '🐱', name: 'Kitten', color: '#FFA500' },
+        { emoji: '🐻', name: 'Bear Cub', color: '#8B4513' },
+        { emoji: '🐼', name: 'Panda', color: '#000000' },
+        { emoji: '🦊', name: 'Fox', color: '#FF6347' },
+        { emoji: '🐹', name: 'Hamster', color: '#F0E68C' }
     ],
     availableFloors: [
         {
             id: 2,
             name: 'Pharmacy',
             items: [
-                { emoji: '💊', name: 'Medicine', x: 150, y: 150, collected: false },
-                { emoji: '💉', name: 'Syringe', x: 300, y: 150, collected: false },
-                { emoji: '🧪', name: 'Test Tube', x: 450, y: 150, collected: false }
+                { emoji: '💊', name: 'Medicine', x: 150, y: 240, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 },
+                { emoji: '💉', name: 'Syringe', x: 350, y: 290, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 },
+                { emoji: '🧪', name: 'Test Tube', x: 500, y: 240, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 }
+            ],
+            platforms: [
+                { x: 0, y: 320, width: 300, height: 20 },
+                { x: 100, y: 270, width: 150, height: 20 },
+                { x: 400, y: 320, width: 200, height: 20 },
+                { x: 450, y: 270, width: 120, height: 20 }
             ],
             cost: 50,
             unlocked: false
@@ -49,9 +64,15 @@ const gameState = {
             id: 3,
             name: 'Treatment Room',
             items: [
-                { emoji: '🩹', name: 'Bandaid', x: 150, y: 150, collected: false },
-                { emoji: '🌡️', name: 'Thermometer', x: 300, y: 150, collected: false },
-                { emoji: '🩺', name: 'Stethoscope', x: 450, y: 150, collected: false }
+                { emoji: '🩹', name: 'Bandaid', x: 200, y: 240, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 },
+                { emoji: '🌡️', name: 'Thermometer', x: 350, y: 190, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 },
+                { emoji: '🩺', name: 'Stethoscope', x: 520, y: 290, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 }
+            ],
+            platforms: [
+                { x: 0, y: 320, width: 250, height: 20 },
+                { x: 150, y: 270, width: 150, height: 20 },
+                { x: 320, y: 220, width: 150, height: 20 },
+                { x: 450, y: 320, width: 150, height: 20 }
             ],
             cost: 100,
             unlocked: false
@@ -60,9 +81,15 @@ const gameState = {
             id: 4,
             name: 'Food & Treats',
             items: [
-                { emoji: '🍖', name: 'Food', x: 150, y: 150, collected: false },
-                { emoji: '🥛', name: 'Milk', x: 300, y: 150, collected: false },
-                { emoji: '🍪', name: 'Treats', x: 450, y: 150, collected: false }
+                { emoji: '🍖', name: 'Food', x: 180, y: 290, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 },
+                { emoji: '🥛', name: 'Milk', x: 350, y: 240, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 },
+                { emoji: '🍪', name: 'Treats', x: 500, y: 290, width: 25, height: 25, respawnTime: 5000, lastCollected: 0 }
+            ],
+            platforms: [
+                { x: 0, y: 320, width: 200, height: 20 },
+                { x: 150, y: 320, width: 200, height: 20 },
+                { x: 300, y: 270, width: 150, height: 20 },
+                { x: 450, y: 320, width: 150, height: 20 }
             ],
             cost: 150,
             unlocked: false
@@ -70,10 +97,12 @@ const gameState = {
     ],
     nextPatientId: 0,
     keys: {},
-    elevatorX: 500,
-    elevatorY: 300,
-    receptionDeskX: 300,
-    receptionDeskY: 300
+    elevatorX: 50,
+    elevatorY: 250,
+    elevatorWidth: 60,
+    elevatorHeight: 70,
+    gravity: 0.5,
+    jumpStrength: -12
 };
 
 // Canvas setup
@@ -129,15 +158,26 @@ function setupControls() {
     document.addEventListener('keydown', (e) => {
         gameState.keys[e.key] = true;
 
+        // Jump with W or Up Arrow or Space
+        if ((e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp' || e.key === ' ') && !gameState.player.isJumping) {
+            gameState.player.velocityY = gameState.jumpStrength;
+            gameState.player.isJumping = true;
+            e.preventDefault();
+        }
+
         // Pick up item with E key
         if (e.key === 'e' || e.key === 'E') {
             tryPickupItem();
         }
 
-        // Use elevator with Space
-        if (e.key === ' ') {
+        // Use elevator with F key
+        if (e.key === 'f' || e.key === 'F') {
             tryUseElevator();
-            e.preventDefault();
+        }
+
+        // Deliver items to patient with Q key
+        if (e.key === 'q' || e.key === 'Q') {
+            tryDeliverToPatient();
         }
     });
 
@@ -176,11 +216,17 @@ function generateNewPatients(count) {
             id: gameState.nextPatientId++,
             emoji: patientType.emoji,
             name: patientType.name,
+            color: patientType.color,
             request: request,
-            collectedItems: []
+            collectedItems: [],
+            x: 450 + (i * 80),
+            y: 260,
+            width: 35,
+            height: 45
         };
 
         gameState.waitingPatients.push(patient);
+        gameState.activePatientsInWorld.push(patient);
     }
 
     updateClipboard();
@@ -241,22 +287,76 @@ function tryPickupItem() {
     const currentFloor = gameState.floors.find(f => f.id === gameState.player.currentFloor);
     if (!currentFloor) return;
 
-    const pickupRadius = 40;
+    const pickupRadius = 50;
 
     for (let item of currentFloor.items) {
-        if (item.collected) continue;
+        // Check if item should be visible (respawn logic)
+        const now = Date.now();
+        if (item.lastCollected > 0 && (now - item.lastCollected) < item.respawnTime) {
+            continue; // Item is still respawning
+        }
 
         const dx = gameState.player.x - item.x;
         const dy = gameState.player.y - item.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < pickupRadius) {
-            item.collected = true;
-            gameState.player.inventory.push({ ...item });
+            item.lastCollected = now;
+            gameState.player.inventory.push({ emoji: item.emoji, name: item.name });
             updateInventory();
             showMessage(`Picked up ${item.name}!`);
             return;
         }
+    }
+}
+
+// Try to deliver items to nearby patient
+function tryDeliverToPatient() {
+    if (gameState.player.inventory.length === 0) return;
+    if (gameState.player.currentFloor !== 1) {
+        showMessage('Return to Reception to deliver items!');
+        return;
+    }
+
+    const deliverRadius = 60;
+
+    for (let patient of gameState.activePatientsInWorld) {
+        const dx = gameState.player.x - patient.x;
+        const dy = gameState.player.y - patient.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < deliverRadius) {
+            deliverItemsToPatient(patient);
+            return;
+        }
+    }
+
+    showMessage('Get closer to a patient!');
+}
+
+// Deliver items to specific patient
+function deliverItemsToPatient(patient) {
+    let itemsDelivered = false;
+    const inventoryCopy = [...gameState.player.inventory];
+
+    inventoryCopy.forEach((invItem, index) => {
+        if (patient.request.includes(invItem.emoji) && !patient.collectedItems.includes(invItem.emoji)) {
+            patient.collectedItems.push(invItem.emoji);
+            gameState.player.inventory.splice(gameState.player.inventory.findIndex(i => i.emoji === invItem.emoji), 1);
+            itemsDelivered = true;
+
+            if (patient.collectedItems.length === patient.request.length) {
+                completePatientRequest(patient.id);
+            }
+        }
+    });
+
+    if (itemsDelivered) {
+        updateInventory();
+        updateClipboard();
+        showMessage(`Delivered items to ${patient.name}!`);
+    } else {
+        showMessage(`${patient.name} doesn't need these items!`);
     }
 }
 
@@ -300,41 +400,30 @@ function showElevatorMenu() {
     document.addEventListener('keydown', handleFloorSelection);
 }
 
-// Check if player is at reception desk
-function checkReceptionDesk() {
-    if (gameState.player.currentFloor !== 1) return;
+// Check collision with platform
+function checkPlatformCollision() {
+    const currentFloor = gameState.floors.find(f => f.id === gameState.player.currentFloor);
+    if (!currentFloor) return;
 
-    const dx = gameState.player.x - gameState.receptionDeskX;
-    const dy = gameState.player.y - gameState.receptionDeskY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    const player = gameState.player;
+    let onGround = false;
 
-    if (distance < 50 && gameState.player.inventory.length > 0) {
-        deliverItems();
-    }
-}
+    currentFloor.platforms.forEach(platform => {
+        // Check if player is above platform and falling onto it
+        if (player.x + player.width > platform.x &&
+            player.x < platform.x + platform.width &&
+            player.y + player.height >= platform.y &&
+            player.y + player.height <= platform.y + 20 &&
+            player.velocityY >= 0) {
 
-// Deliver items to patients
-function deliverItems() {
-    let itemsDelivered = false;
-
-    gameState.player.inventory.forEach(invItem => {
-        gameState.waitingPatients.forEach(patient => {
-            if (patient.request.includes(invItem.emoji) && !patient.collectedItems.includes(invItem.emoji)) {
-                patient.collectedItems.push(invItem.emoji);
-                itemsDelivered = true;
-
-                if (patient.collectedItems.length === patient.request.length) {
-                    completePatientRequest(patient.id);
-                }
-            }
-        });
+            player.y = platform.y - player.height;
+            player.velocityY = 0;
+            player.isJumping = false;
+            onGround = true;
+        }
     });
 
-    if (itemsDelivered) {
-        gameState.player.inventory = [];
-        updateInventory();
-        updateClipboard();
-    }
+    return onGround;
 }
 
 // Complete Patient Request
@@ -348,7 +437,12 @@ function completePatientRequest(patientId) {
 
     showMessage(`${patient.name} helped! +${coinsEarned} 🪙`);
 
+    // Remove from both lists
     gameState.waitingPatients.splice(patientIndex, 1);
+    const worldIndex = gameState.activePatientsInWorld.findIndex(p => p.id === patientId);
+    if (worldIndex !== -1) {
+        gameState.activePatientsInWorld.splice(worldIndex, 1);
+    }
 
     updateCoins();
     updateClipboard();
@@ -384,21 +478,29 @@ function showMessage(message) {
 
 // Game Loop
 function gameLoop() {
-    // Update player position
-    if (gameState.keys['ArrowUp'] || gameState.keys['w'] || gameState.keys['W']) {
-        gameState.player.y = Math.max(50, gameState.player.y - gameState.player.speed);
-    }
-    if (gameState.keys['ArrowDown'] || gameState.keys['s'] || gameState.keys['S']) {
-        gameState.player.y = Math.min(350, gameState.player.y + gameState.player.speed);
-    }
+    const player = gameState.player;
+
+    // Horizontal movement
     if (gameState.keys['ArrowLeft'] || gameState.keys['a'] || gameState.keys['A']) {
-        gameState.player.x = Math.max(30, gameState.player.x - gameState.player.speed);
+        player.x = Math.max(0, player.x - player.speed);
     }
     if (gameState.keys['ArrowRight'] || gameState.keys['d'] || gameState.keys['D']) {
-        gameState.player.x = Math.min(570, gameState.player.x + gameState.player.speed);
+        player.x = Math.min(canvas.width - player.width, player.x + player.speed);
     }
 
-    checkReceptionDesk();
+    // Apply gravity
+    player.velocityY += gameState.gravity;
+    player.y += player.velocityY;
+
+    // Check platform collisions
+    checkPlatformCollision();
+
+    // Keep player in bounds
+    if (player.y > canvas.height - player.height) {
+        player.y = canvas.height - player.height;
+        player.velocityY = 0;
+        player.isJumping = false;
+    }
 
     render();
     requestAnimationFrame(gameLoop);
@@ -407,61 +509,120 @@ function gameLoop() {
 // Render game
 function render() {
     // Clear canvas
-    ctx.fillStyle = '#f0f8ff';
+    ctx.fillStyle = '#87CEEB';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const currentFloor = gameState.floors.find(f => f.id === gameState.player.currentFloor);
 
-    // Draw floor
-    ctx.fillStyle = '#e6f2ff';
-    ctx.fillRect(20, 20, 560, 360);
-
     // Draw floor name
-    ctx.fillStyle = '#667eea';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText(currentFloor.name, 30, 50);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText(currentFloor.name, 10, 30);
+
+    // Draw platforms
+    ctx.fillStyle = '#8B4513';
+    currentFloor.platforms.forEach(platform => {
+        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+        // Platform edge detail
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(platform.x, platform.y, platform.width, 3);
+        ctx.fillStyle = '#8B4513';
+    });
 
     // Draw elevator
-    ctx.fillStyle = '#888';
-    ctx.fillRect(gameState.elevatorX - 25, gameState.elevatorY - 40, 50, 80);
+    ctx.fillStyle = '#696969';
+    ctx.fillRect(gameState.elevatorX, gameState.elevatorY, gameState.elevatorWidth, gameState.elevatorHeight);
     ctx.fillStyle = '#FFD700';
-    ctx.font = '30px Arial';
-    ctx.fillText('🛗', gameState.elevatorX - 15, gameState.elevatorY + 5);
+    ctx.fillRect(gameState.elevatorX + 5, gameState.elevatorY + 5, gameState.elevatorWidth - 10, gameState.elevatorHeight - 10);
     ctx.fillStyle = '#333';
-    ctx.font = '12px Arial';
-    ctx.fillText('SPACE', gameState.elevatorX - 20, gameState.elevatorY + 50);
-
-    // Draw reception desk on floor 1
-    if (currentFloor.id === 1) {
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(gameState.receptionDeskX - 40, gameState.receptionDeskY - 20, 80, 40);
-        ctx.fillStyle = '#333';
-        ctx.font = '10px Arial';
-        ctx.fillText('RECEPTION', gameState.receptionDeskX - 30, gameState.receptionDeskY + 35);
-    }
+    ctx.font = 'bold 12px Arial';
+    ctx.fillText('ELEVATOR', gameState.elevatorX + 5, gameState.elevatorY + 40);
+    ctx.font = '10px Arial';
+    ctx.fillText('Press F', gameState.elevatorX + 10, gameState.elevatorY + 55);
 
     // Draw items
+    const now = Date.now();
     currentFloor.items.forEach(item => {
-        if (!item.collected) {
-            ctx.font = '40px Arial';
-            ctx.fillText(item.emoji, item.x - 20, item.y + 15);
+        // Check if item should be visible
+        if (item.lastCollected === 0 || (now - item.lastCollected) >= item.respawnTime) {
+            // Item background
+            ctx.fillStyle = '#FFE4B5';
+            ctx.fillRect(item.x - 5, item.y - 5, item.width + 10, item.height + 10);
+            ctx.strokeStyle = '#DEB887';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(item.x - 5, item.y - 5, item.width + 10, item.height + 10);
 
+            // Item emoji
+            ctx.font = '25px Arial';
+            ctx.fillText(item.emoji, item.x, item.y + 20);
+
+            // Item name
             ctx.fillStyle = '#333';
+            ctx.font = '8px Arial';
+            ctx.fillText(item.name, item.x - 15, item.y - 8);
+            ctx.fillText('(E)', item.x + 5, item.y + 38);
+        } else {
+            // Show respawn timer
+            const timeLeft = Math.ceil((item.respawnTime - (now - item.lastCollected)) / 1000);
+            ctx.fillStyle = '#999';
             ctx.font = '10px Arial';
-            ctx.fillText(item.name, item.x - 20, item.y + 30);
-            ctx.fillText('Press E', item.x - 18, item.y - 20);
+            ctx.fillText(`${timeLeft}s`, item.x, item.y + 15);
         }
     });
 
-    // Draw player
-    ctx.font = '50px Arial';
-    ctx.fillText(gameState.player.character, gameState.player.x - 25, gameState.player.y + 20);
+    // Draw patients in world (only on floor 1)
+    if (currentFloor.id === 1) {
+        gameState.activePatientsInWorld.forEach(patient => {
+            // Patient body (rectangle)
+            ctx.fillStyle = patient.color;
+            ctx.fillRect(patient.x, patient.y, patient.width, patient.height);
 
-    // Draw player shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.beginPath();
-    ctx.ellipse(gameState.player.x, gameState.player.y + 25, 20, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
+            // Patient outline
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(patient.x, patient.y, patient.width, patient.height);
+
+            // Patient emoji as head
+            ctx.font = '30px Arial';
+            ctx.fillText(patient.emoji, patient.x + 2, patient.y - 5);
+
+            // Patient name
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 10px Arial';
+            ctx.fillText(patient.name, patient.x - 5, patient.y + patient.height + 12);
+
+            // Show what they need
+            ctx.font = '8px Arial';
+            ctx.fillText('Needs:', patient.x - 5, patient.y + patient.height + 22);
+            patient.request.forEach((item, idx) => {
+                const collected = patient.collectedItems.includes(item);
+                ctx.fillStyle = collected ? '#90EE90' : '#333';
+                ctx.font = '12px Arial';
+                ctx.fillText(item, patient.x + (idx * 15) - 5, patient.y + patient.height + 35);
+            });
+            ctx.fillStyle = '#333';
+            ctx.font = '7px Arial';
+            ctx.fillText('(Q)', patient.x + 8, patient.y + patient.height + 45);
+        });
+    }
+
+    // Draw player (rectangle)
+    ctx.fillStyle = gameState.player.color;
+    ctx.fillRect(gameState.player.x, gameState.player.y, gameState.player.width, gameState.player.height);
+
+    // Player outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(gameState.player.x, gameState.player.y, gameState.player.width, gameState.player.height);
+
+    // Player character emoji as head
+    ctx.font = '35px Arial';
+    ctx.fillText(gameState.player.character, gameState.player.x - 2, gameState.player.y - 5);
+
+    // Draw controls hint
+    ctx.fillStyle = '#fff';
+    ctx.font = '11px Arial';
+    ctx.fillText('← → Move | Space/W Jump | E Pickup | Q Deliver | F Elevator', 10, canvas.height - 10);
 }
 
 // Shop Modal
