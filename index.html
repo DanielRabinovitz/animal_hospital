@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animal Hospital Adventure</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Character Selection Screen -->
+        <div id="character-select" class="screen active">
+            <h1>🏥 Animal Hospital Adventure 🏥</h1>
+            <h2>Choose Your Character!</h2>
+            <div class="character-grid">
+                <div class="character-card" data-character="cat">
+                    <div class="character-icon">🐱</div>
+                    <h3>Dr. Whiskers</h3>
+                    <p>A caring cat doctor</p>
+                </div>
+                <div class="character-card" data-character="dog">
+                    <div class="character-icon">🐶</div>
+                    <h3>Dr. Buddy</h3>
+                    <p>A friendly dog doctor</p>
+                </div>
+                <div class="character-card" data-character="bunny">
+                    <div class="character-icon">🐰</div>
+                    <h3>Dr. Hoppy</h3>
+                    <p>A cheerful bunny doctor</p>
+                </div>
+                <div class="character-card" data-character="bear">
+                    <div class="character-icon">🐻</div>
+                    <h3>Dr. Cuddles</h3>
+                    <p>A gentle bear doctor</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Game Screen -->
+        <div id="game-screen" class="screen">
+            <!-- HUD -->
+            <div id="hud">
+                <div class="hud-item">
+                    <span class="label">Animal Coins:</span>
+                    <span id="coins" class="value">0</span> 🪙
+                </div>
+                <div class="hud-item">
+                    <span class="label">Level:</span>
+                    <span id="current-floor" class="value">1</span>
+                </div>
+                <div class="hud-item">
+                    <span id="player-character">🐱</span>
+                    <span id="player-name">Dr. Whiskers</span>
+                </div>
+            </div>
+
+            <!-- Hospital Building -->
+            <div id="hospital">
+                <div id="floors-container"></div>
+            </div>
+
+            <!-- Patient Request Panel -->
+            <div id="patient-panel">
+                <div id="current-patient">
+                    <h3>Current Patient</h3>
+                    <div id="patient-info">
+                        <div id="patient-avatar">🐭</div>
+                        <div id="patient-request">
+                            <p id="patient-speech"></p>
+                        </div>
+                    </div>
+                    <div id="request-items"></div>
+                </div>
+            </div>
+
+            <!-- Upgrade Shop -->
+            <button id="shop-button" class="fancy-button">🏪 Upgrade Shop</button>
+        </div>
+
+        <!-- Shop Modal -->
+        <div id="shop-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>🏪 Upgrade Shop</h2>
+                <div id="shop-items">
+                    <div class="shop-section">
+                        <h3>🏢 New Floors</h3>
+                        <div id="floor-upgrades"></div>
+                    </div>
+                    <div class="shop-section">
+                        <h3>⭐ Floor Upgrades</h3>
+                        <div id="existing-floor-upgrades"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
