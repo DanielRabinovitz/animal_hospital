@@ -8,24 +8,25 @@ const gameState = {
     floors: [
         { id: 1, name: 'Reception', level: 1, items: ['📋', '🔔', '📞'], unlocked: true }
     ],
-    currentPatient: null,
-    selectedItems: [],
-    patients: [
-        { emoji: '🐭', name: 'Mouse', requests: [['🧀', '💊'], ['🌡️', '💉'], ['🩹', '💊']] },
-        { emoji: '🐰', name: 'Bunny', requests: [['🥕', '💊'], ['🌡️', '🩹'], ['💉', '🥕']] },
-        { emoji: '🐶', name: 'Puppy', requests: [['🦴', '💊'], ['🌡️', '💉'], ['🩹', '🦴']] },
-        { emoji: '🐱', name: 'Kitten', requests: [['🐟', '💊'], ['🌡️', '🩹'], ['💉', '🐟']] },
-        { emoji: '🐻', name: 'Bear Cub', requests: [['🍯', '💊'], ['🌡️', '💉'], ['🩹', '🍯']] },
-        { emoji: '🐼', name: 'Panda', requests: [['🎋', '💊'], ['🌡️', '🩹'], ['💉', '🎋']] },
-        { emoji: '🦊', name: 'Fox', requests: [['🍇', '💊'], ['🌡️', '💉'], ['🩹', '🍇']] },
-        { emoji: '🐹', name: 'Hamster', requests: [['🌰', '💊'], ['🌡️', '🩹'], ['💉', '🌰']] }
+    waitingPatients: [],
+    currentPatientId: null,
+    patientTypes: [
+        { emoji: '🐭', name: 'Mouse' },
+        { emoji: '🐰', name: 'Bunny' },
+        { emoji: '🐶', name: 'Puppy' },
+        { emoji: '🐱', name: 'Kitten' },
+        { emoji: '🐻', name: 'Bear Cub' },
+        { emoji: '🐼', name: 'Panda' },
+        { emoji: '🦊', name: 'Fox' },
+        { emoji: '🐹', name: 'Hamster' }
     ],
     availableFloors: [
         { id: 2, name: 'Examination Room', items: ['🌡️', '🩺', '💉'], cost: 50, unlocked: false },
         { id: 3, name: 'Treatment Room', items: ['💊', '🩹', '💉'], cost: 100, unlocked: false },
         { id: 4, name: 'Food Court', items: ['🧀', '🥕', '🦴', '🐟'], cost: 150, unlocked: false },
         { id: 5, name: 'Specialty Care', items: ['🍯', '🎋', '🍇', '🌰'], cost: 200, unlocked: false }
-    ]
+    ],
+    nextPatientId: 0
 };
 
 // Character Selection
@@ -62,7 +63,7 @@ characterCards.forEach(card => {
 // Initialize Game
 function initGame() {
     renderFloors();
-    generateNewPatient();
+    generateNewPatients(4);
     updateCoins();
 }
 
@@ -95,85 +96,124 @@ function renderFloors() {
     });
 }
 
-// Generate New Patient
-function generateNewPatient() {
-    // Get all available items from unlocked floors
-    const availableItems = [];
+// Get all unique available items from unlocked floors
+function getAvailableItems() {
+    const availableItems = new Set();
     gameState.floors.forEach(floor => {
-        availableItems.push(...floor.items);
+        floor.items.forEach(item => availableItems.add(item));
     });
+    return Array.from(availableItems);
+}
 
-    // Generate a random request with 2 items from available items
-    const numItems = 2;
-    const request = [];
-    const shuffled = [...availableItems].sort(() => Math.random() - 0.5);
+// Generate New Patients
+function generateNewPatients(count) {
+    const availableItems = getAvailableItems();
 
-    for (let i = 0; i < numItems && i < shuffled.length; i++) {
-        if (!request.includes(shuffled[i])) {
-            request.push(shuffled[i]);
+    for (let i = 0; i < count; i++) {
+        // Generate a random request with 2 unique items from available items only
+        const numItems = Math.min(2, availableItems.length);
+        const request = [];
+        const shuffled = [...availableItems].sort(() => Math.random() - 0.5);
+
+        for (let j = 0; j < numItems; j++) {
+            request.push(shuffled[j]);
         }
+
+        // Pick a random patient type
+        const patientType = gameState.patientTypes[Math.floor(Math.random() * gameState.patientTypes.length)];
+
+        const patient = {
+            id: gameState.nextPatientId++,
+            emoji: patientType.emoji,
+            name: patientType.name,
+            request: request,
+            collectedItems: []
+        };
+
+        gameState.waitingPatients.push(patient);
     }
 
-    // If we couldn't get enough unique items, just use what we have
-    if (request.length === 0 && availableItems.length > 0) {
-        request.push(availableItems[0]);
-    }
+    renderPatients();
+}
 
-    // Pick a random patient
-    const patient = gameState.patients[Math.floor(Math.random() * gameState.patients.length)];
+// Render all waiting patients
+function renderPatients() {
+    const container = document.getElementById('patients-container');
+    container.innerHTML = '';
 
-    gameState.currentPatient = {
-        ...patient,
-        currentRequest: request
-    };
+    gameState.waitingPatients.forEach(patient => {
+        const patientDiv = document.createElement('div');
+        patientDiv.className = 'patient-card';
+        patientDiv.dataset.patientId = patient.id;
 
-    gameState.selectedItems = [];
+        const requestItemsHTML = patient.request.map(item => {
+            const collected = patient.collectedItems.includes(item);
+            return `<div class="request-item ${collected ? 'collected' : ''}">${item}</div>`;
+        }).join('');
 
-    document.getElementById('patient-avatar').textContent = patient.emoji;
-    document.getElementById('patient-speech').textContent =
-        `Hi! I'm ${patient.name}. I need some help! Can you get me these items?`;
+        patientDiv.innerHTML = `
+            <div class="patient-avatar">${patient.emoji}</div>
+            <div class="patient-details">
+                <div class="patient-name">${patient.name}</div>
+                <div class="patient-needs">Needs:</div>
+                <div class="request-items-list">${requestItemsHTML}</div>
+            </div>
+        `;
 
-    const requestItemsDiv = document.getElementById('request-items');
-    requestItemsDiv.innerHTML = request.map(item =>
-        `<div class="request-item">${item}</div>`
-    ).join('');
-
-    // Clear previous selections
-    document.querySelectorAll('.item').forEach(item => {
-        item.classList.remove('selected');
+        container.appendChild(patientDiv);
     });
 }
 
 // Select Item
 function selectItem(itemEmoji, element) {
-    if (!gameState.currentPatient) return;
+    if (gameState.waitingPatients.length === 0) return;
 
-    const request = gameState.currentPatient.currentRequest;
+    // Find a patient that needs this item and hasn't collected it yet
+    const patient = gameState.waitingPatients.find(p =>
+        p.request.includes(itemEmoji) && !p.collectedItems.includes(itemEmoji)
+    );
 
-    if (request.includes(itemEmoji) && !gameState.selectedItems.includes(itemEmoji)) {
-        gameState.selectedItems.push(itemEmoji);
+    if (patient) {
+        patient.collectedItems.push(itemEmoji);
+
+        // Visual feedback
         element.classList.add('selected');
+        setTimeout(() => {
+            element.classList.remove('selected');
+        }, 300);
 
-        if (gameState.selectedItems.length === request.length) {
+        // Check if patient request is complete
+        if (patient.collectedItems.length === patient.request.length) {
             setTimeout(() => {
-                completeRequest();
-            }, 500);
+                completePatientRequest(patient.id);
+            }, 400);
+        } else {
+            renderPatients();
         }
     }
 }
 
-// Complete Request
-function completeRequest() {
+// Complete Patient Request
+function completePatientRequest(patientId) {
+    const patientIndex = gameState.waitingPatients.findIndex(p => p.id === patientId);
+    if (patientIndex === -1) return;
+
+    const patient = gameState.waitingPatients[patientIndex];
     const coinsEarned = 10 + (gameState.floors.length * 5);
     gameState.player.coins += coinsEarned;
 
-    showSuccessMessage(`Great job! +${coinsEarned} 🪙`);
+    showSuccessMessage(`${patient.name} helped! +${coinsEarned} 🪙`);
+
+    // Remove the patient
+    gameState.waitingPatients.splice(patientIndex, 1);
 
     updateCoins();
+    renderPatients();
 
+    // Add a new patient after a short delay
     setTimeout(() => {
-        generateNewPatient();
-    }, 1500);
+        generateNewPatients(1);
+    }, 800);
 }
 
 // Update Coins Display

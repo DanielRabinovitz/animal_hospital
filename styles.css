@@ -227,16 +227,32 @@ body {
     text-align: center;
 }
 
-#patient-info {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    margin-bottom: 15px;
+#patients-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
 }
 
-#patient-avatar {
-    font-size: 4em;
-    animation: bounce 1s infinite;
+.patient-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 3px solid #667eea;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.patient-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.patient-avatar {
+    font-size: 3em;
+    margin-bottom: 10px;
+    animation: bounce 2s infinite;
 }
 
 @keyframes bounce {
@@ -244,43 +260,45 @@ body {
     50% { transform: translateY(-10px); }
 }
 
-#patient-request {
-    flex: 1;
-    background: white;
-    border-radius: 10px;
-    padding: 15px;
-    position: relative;
+.patient-details {
+    text-align: center;
+    width: 100%;
 }
 
-#patient-request::before {
-    content: '';
-    position: absolute;
-    left: -10px;
-    top: 20px;
-    width: 0;
-    height: 0;
-    border-top: 10px solid transparent;
-    border-bottom: 10px solid transparent;
-    border-right: 10px solid white;
-}
-
-#patient-speech {
+.patient-name {
+    font-weight: bold;
     color: #333;
+    margin-bottom: 8px;
     font-size: 1.1em;
 }
 
-#request-items {
+.patient-needs {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.request-items-list {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .request-item {
-    background: white;
-    border-radius: 10px;
-    padding: 10px 20px;
-    font-size: 1.5em;
+    background: #ffecd2;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 1.3em;
     border: 2px solid #667eea;
+    transition: all 0.3s;
+}
+
+.request-item.collected {
+    background: #90EE90;
+    border-color: #4CAF50;
+    opacity: 0.7;
+    text-decoration: line-through;
 }
 
 /* Buttons */
