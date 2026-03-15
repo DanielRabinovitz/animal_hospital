@@ -155,8 +155,10 @@ function renderPatients() {
             <div class="patient-avatar">${patient.emoji}</div>
             <div class="patient-details">
                 <div class="patient-name">${patient.name}</div>
-                <div class="patient-needs">Needs:</div>
-                <div class="request-items-list">${requestItemsHTML}</div>
+                <div class="patient-request-section">
+                    <div class="patient-needs">Needs help with:</div>
+                    <div class="request-items-list">${requestItemsHTML}</div>
+                </div>
             </div>
         `;
 
