@@ -97,9 +97,30 @@ function renderFloors() {
 
 // Generate New Patient
 function generateNewPatient() {
+    // Get all available items from unlocked floors
+    const availableItems = [];
+    gameState.floors.forEach(floor => {
+        availableItems.push(...floor.items);
+    });
+
+    // Generate a random request with 2 items from available items
+    const numItems = 2;
+    const request = [];
+    const shuffled = [...availableItems].sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < numItems && i < shuffled.length; i++) {
+        if (!request.includes(shuffled[i])) {
+            request.push(shuffled[i]);
+        }
+    }
+
+    // If we couldn't get enough unique items, just use what we have
+    if (request.length === 0 && availableItems.length > 0) {
+        request.push(availableItems[0]);
+    }
+
+    // Pick a random patient
     const patient = gameState.patients[Math.floor(Math.random() * gameState.patients.length)];
-    const requestIndex = Math.floor(Math.random() * patient.requests.length);
-    const request = patient.requests[requestIndex];
 
     gameState.currentPatient = {
         ...patient,
